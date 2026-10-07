@@ -312,6 +312,27 @@ kbd {
         color: #3fb950;
     }
 
+.github-login {
+    padding: 8px 14px;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    background: #21262d;
+    color: #e6edf3;
+    cursor: pointer;
+}
+
+    .github-login:hover {
+        background: #30363d;
+    }
+
+.github-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: block;
+    margin: 0 auto 10px;
+}
+
 
 /* MOBILE */
 

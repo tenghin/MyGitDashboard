@@ -137,42 +137,26 @@
                 <div class="leaderboard-header">
 
                     <div>
-
                         <span class="card-label">
                             PLAYER
                         </span>
 
                         <h2>High Score</h2>
-
                     </div>
-
-                    @if (githubUsername != null)
-                    {
-                        <span class="coming-soon">
-                            GitHub
-                        </span>
-                    }
-                    else
-                    {
-                        <span class="coming-soon">
-                            Local
-                        </span>
-                    }
 
                 </div>
 
 
-                @if (githubUsername != null)
+                @if (githubPlayer == null)
                 {
                     <div class="leaderboard-empty">
 
-                        <strong>
-                            @githubUsername
-                        </strong>
+                        <button class="github-login"
+                                @onclick="LoginWithGitHub">
 
-                        <br />
+                            Continue with GitHub
 
-                        Best score: @highScore
+                        </button>
 
                     </div>
                 }
@@ -180,13 +164,27 @@
                 {
                     <div class="leaderboard-empty">
 
-                        High score is currently stored
-                        in this browser.
+                        @if (!string.IsNullOrWhiteSpace(
+                                            githubPlayer.AvatarUrl))
+                        {
+                            <img class="github-avatar"
+                                 src="@githubPlayer.AvatarUrl"
+                                 alt="GitHub avatar" />
+                        }
 
-                        <br /><br />
+                        <strong>
+                            @githubPlayer.Username
+                        </strong>
 
-                        GitHub score syncing will activate
-                        after GitHub login is connected.
+                        <br />
+                        <br />
+
+                        <button class="github-login"
+                                @onclick="Logout">
+
+                            Sign out
+
+                        </button>
 
                     </div>
                 }
@@ -287,6 +285,14 @@
     private ElementReference gamePanel;
 
     private CancellationTokenSource? gameLoopCancellation;
+
+    // ============================================================
+    // GITHUB LOGIN
+    // ============================================================
+
+    private IJSObjectReference? authModule;
+
+    private GitHubPlayer? githubPlayer;
 
 
     // ============================================================
@@ -1187,5 +1193,58 @@
             get;
             set;
         }
+    }
+
+    
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        authModule =
+            await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./js/auth.js"
+            );
+
+        githubPlayer =
+            await authModule.InvokeAsync<GitHubPlayer?>(
+                "getCurrentUser"
+            );
+
+        StateHasChanged();
+    }
+
+    private async Task LoginWithGitHub()
+    {
+        if (authModule == null)
+            return;
+
+        await authModule.InvokeVoidAsync(
+            "signInWithGitHub"
+        );
+    }
+
+
+    private async Task Logout()
+    {
+        if (authModule == null)
+            return;
+
+        await authModule.InvokeVoidAsync(
+            "signOut"
+        );
+
+        githubPlayer = null;
+    }
+
+    private class GitHubPlayer
+    {
+        public string Id { get; set; } = "";
+
+        public string Username { get; set; } = "";
+
+        public string AvatarUrl { get; set; } = "";
     }
 }
