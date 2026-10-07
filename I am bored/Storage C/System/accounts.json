@@ -1,0 +1,14 @@
+[
+  {
+    "Username": "Alice",
+    "PasswordHash": "bhEohAGN6AqB3+BUeK6QldOfdxp0n8GAqtXbNRmYFMQ=",
+    "Salt": "jO1zt4w4gqoVevgdZg9Enw==",
+    "Role": "User"
+  },
+  {
+    "Username": "Admin",
+    "PasswordHash": "hE5ATQMqdxPIr4N5NHfQHQEZhq0SRJQ9CIqn26FhwOs=",
+    "Salt": "+5JEWm1JWCdBnqodj7L8tQ==",
+    "Role": "Admin"
+  }
+]

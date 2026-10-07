@@ -1,0 +1,74 @@
+﻿body {
+    margin: 0;
+    background: #010409;
+    color: #e6edf3;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.page {
+    max-width: 1100px;
+    margin: auto;
+    padding: 0 24px;
+}
+
+.topbar {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #30363d;
+}
+
+.logo {
+    font-family: Consolas, monospace;
+    font-weight: bold;
+}
+
+nav {
+    display: flex;
+    gap: 24px;
+}
+
+    nav a {
+        color: #8b949e;
+        text-decoration: none;
+    }
+
+        nav a:hover {
+            color: #e6edf3;
+        }
+
+.hero {
+    padding-top: 120px;
+    max-width: 700px;
+}
+
+.badge {
+    display: inline-block;
+    font-family: Consolas, monospace;
+    color: #7ee787;
+    border: 1px solid #30363d;
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-bottom: 24px;
+}
+
+h1 {
+    font-size: 56px;
+    margin: 0 0 20px;
+}
+
+p {
+    color: #8b949e;
+    font-size: 20px;
+}
+
+.button {
+    display: inline-block;
+    margin-top: 24px;
+    padding: 12px 18px;
+    background: #238636;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+}

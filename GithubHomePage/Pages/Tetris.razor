@@ -1,0 +1,1191 @@
+﻿@page "/tetris"
+
+@using System.Text
+@using System.Net
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+
+<PageTitle>Tetris | I_AM_BORED</PageTitle>
+
+<div class="tetris-page">
+
+    <header class="page-header">
+
+        <div>
+            <a href="/" class="back-link">← Back</a>
+
+            <h1>Tetris</h1>
+
+            <p class="subtitle">
+                A console Tetris project rebuilt with C# and Blazor WebAssembly.
+            </p>
+        </div>
+
+        <div class="tags">
+            <span>C#</span>
+            <span>.NET 8</span>
+            <span>Blazor WASM</span>
+        </div>
+
+    </header>
+
+
+    <div class="game-layout">
+
+        <section class="game-panel"
+                 tabindex="0"
+                 @ref="gamePanel"
+                 @onkeydown="HandleKeyDown"
+                 @onkeydown:preventDefault="gameRunning">
+
+            <div class="panel-header">
+
+                <div class="panel-title">
+                    <span class="status-dot"></span>
+                    TETRIS
+                </div>
+
+                <span class="status">
+                    @(gameOver
+                                        ? "GAME OVER"
+                                        : gameRunning
+                                        ? "RUNNING"
+                                        : "READY")
+                </span>
+
+            </div>
+
+
+            <div class="game-area">
+
+                <div class="score-column">
+
+                    <div class="score-card">
+                        <span class="label">SCORE</span>
+                        <strong>@score</strong>
+                    </div>
+
+                    <div class="score-card">
+                        <span class="label">HIGH SCORE</span>
+                        <strong>@highScore</strong>
+                    </div>
+
+                </div>
+
+                <div class="board-column">
+
+                    <div class="board">
+                        <pre>@GetBoardText()</pre>
+                    </div>
+
+                    <button class="play-button" @onclick="StartGame">
+                        @(gameRunning ? "Restart Game" : "Start Game")
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="controls">
+
+                <div>
+                    <kbd>A</kbd>
+                    <kbd>D</kbd>
+                    <span>Move</span>
+                </div>
+
+                <div>
+                    <kbd>W</kbd>
+                    <span>Rotate</span>
+                </div>
+
+                <div>
+                    <kbd>S</kbd>
+                    <span>Soft Drop</span>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <aside class="sidebar">
+
+            <section class="info-card">
+
+                <span class="card-label">
+                    PROJECT
+                </span>
+
+                <h2>Console → Web</h2>
+
+                <p>
+                    Originally built as part of the I_AM_BORED
+                    C# console desktop project.
+                </p>
+
+            </section>
+
+
+            <section class="info-card">
+
+                <div class="leaderboard-header">
+
+                    <div>
+
+                        <span class="card-label">
+                            PLAYER
+                        </span>
+
+                        <h2>High Score</h2>
+
+                    </div>
+
+                    @if (githubUsername != null)
+                    {
+                        <span class="coming-soon">
+                            GitHub
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="coming-soon">
+                            Local
+                        </span>
+                    }
+
+                </div>
+
+
+                @if (githubUsername != null)
+                {
+                    <div class="leaderboard-empty">
+
+                        <strong>
+                            @githubUsername
+                        </strong>
+
+                        <br />
+
+                        Best score: @highScore
+
+                    </div>
+                }
+                else
+                {
+                    <div class="leaderboard-empty">
+
+                        High score is currently stored
+                        in this browser.
+
+                        <br /><br />
+
+                        GitHub score syncing will activate
+                        after GitHub login is connected.
+
+                    </div>
+                }
+
+            </section>
+
+
+            <section class="info-card">
+
+                <span class="card-label">
+                    RUNTIME
+                </span>
+
+                <div class="runtime-row">
+                    <span>Framework</span>
+                    <strong>.NET 8</strong>
+                </div>
+
+                <div class="runtime-row">
+                    <span>Frontend</span>
+                    <strong>Blazor WASM</strong>
+                </div>
+
+                <div class="runtime-row">
+                    <span>Language</span>
+                    <strong>C#</strong>
+                </div>
+
+                <div class="runtime-row">
+
+                    <span>Status</span>
+
+                    <strong class="online">
+                        ● Online
+                    </strong>
+
+                </div>
+
+            </section>
+
+        </aside>
+
+    </div>
+
+</div>
+
+
+@code {
+
+    // ============================================================
+    // BOARD
+    // ============================================================
+
+    private const int Width = 10;
+    private const int Height = 20;
+
+    private readonly Random random = new();
+
+    private int[,] board =
+        new int[Height, Width];
+
+    private int[,] currentShape =
+        new int[1, 1];
+
+
+    // ============================================================
+    // CURRENT PIECE
+    // ============================================================
+
+    private int pieceX;
+    private int pieceY;
+
+
+    // ============================================================
+    // SCORE
+    // ============================================================
+
+    private int score;
+    private int highScore;
+
+
+    // ============================================================
+    // PLAYER
+    // ============================================================
+
+    private string? githubUsername;
+
+    private bool isGitHubSignedIn;
+
+
+    // ============================================================
+    // GAME STATE
+    // ============================================================
+
+    private bool gameRunning;
+    private bool gameOver;
+
+    private ElementReference gamePanel;
+
+    private CancellationTokenSource? gameLoopCancellation;
+
+
+    // ============================================================
+    // STARTUP
+    // ============================================================
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHighScore();
+    }
+
+
+    // ============================================================
+    // START / RESTART
+    // ============================================================
+
+    private async Task StartGame()
+    {
+        gameLoopCancellation?.Cancel();
+        gameLoopCancellation?.Dispose();
+
+        board =
+            new int[Height, Width];
+
+        score = 0;
+
+        gameOver = false;
+        gameRunning = true;
+
+        SpawnPiece();
+
+        gameLoopCancellation =
+            new CancellationTokenSource();
+
+        await gamePanel.FocusAsync();
+
+        _ = RunGameLoop(
+            gameLoopCancellation.Token
+        );
+    }
+
+
+    // ============================================================
+    // GAME LOOP
+    // ============================================================
+
+    private async Task RunGameLoop(
+        CancellationToken token)
+    {
+        try
+        {
+            while (!gameOver &&
+                   !token.IsCancellationRequested)
+            {
+                await Task.Delay(
+                    400,
+                    token
+                );
+
+                if (!MovePiece(0, 1))
+                {
+                    LockPiece();
+
+                    await ClearLines();
+
+                    SpawnPiece();
+                }
+
+                await InvokeAsync(
+                    StateHasChanged
+                );
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Restarting the game cancels the old loop.
+        }
+    }
+
+
+    // ============================================================
+    // SPAWN
+    // ============================================================
+
+    private void SpawnPiece()
+    {
+        currentShape =
+            GetRandomShape();
+
+        pieceX =
+            (Width -
+             currentShape.GetLength(1))
+            / 2;
+
+        pieceY = 0;
+
+
+        if (!CanMove(
+                pieceX,
+                pieceY,
+                currentShape))
+        {
+            gameOver = true;
+            gameRunning = false;
+        }
+    }
+
+
+    // ============================================================
+    // MOVE
+    // ============================================================
+
+    private bool MovePiece(
+        int moveX,
+        int moveY)
+    {
+        int newX =
+            pieceX + moveX;
+
+        int newY =
+            pieceY + moveY;
+
+
+        if (!CanMove(
+                newX,
+                newY,
+                currentShape))
+        {
+            return false;
+        }
+
+
+        pieceX = newX;
+        pieceY = newY;
+
+        return true;
+    }
+
+
+    // ============================================================
+    // COLLISION
+    // ============================================================
+
+    private bool CanMove(
+        int newX,
+        int newY,
+        int[,] shape)
+    {
+        for (int y = 0;
+             y < shape.GetLength(0);
+             y++)
+        {
+            for (int x = 0;
+                 x < shape.GetLength(1);
+                 x++)
+            {
+                if (shape[y, x] == 0)
+                {
+                    continue;
+                }
+
+
+                int boardX =
+                    newX + x;
+
+                int boardY =
+                    newY + y;
+
+
+                if (boardX < 0 ||
+                    boardX >= Width)
+                {
+                    return false;
+                }
+
+
+                if (boardY < 0 ||
+                    boardY >= Height)
+                {
+                    return false;
+                }
+
+
+                if (board[boardY, boardX] != 0)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+
+    // ============================================================
+    // LOCK PIECE
+    // ============================================================
+
+    private void LockPiece()
+    {
+        for (int y = 0;
+             y < currentShape.GetLength(0);
+             y++)
+        {
+            for (int x = 0;
+                 x < currentShape.GetLength(1);
+                 x++)
+            {
+                if (currentShape[y, x] == 0)
+                {
+                    continue;
+                }
+
+
+                int boardX =
+                    pieceX + x;
+
+                int boardY =
+                    pieceY + y;
+
+
+                if (boardY >= 0 &&
+                    boardY < Height &&
+                    boardX >= 0 &&
+                    boardX < Width)
+                {
+                    board[boardY, boardX] = 1;
+                }
+            }
+        }
+    }
+
+
+    // ============================================================
+    // CLEAR LINES
+    // ============================================================
+
+    private async Task ClearLines()
+    {
+        int linesCleared = 0;
+
+
+        for (int y = Height - 1;
+             y >= 0;
+             y--)
+        {
+            bool full = true;
+
+
+            for (int x = 0;
+                 x < Width;
+                 x++)
+            {
+                if (board[y, x] == 0)
+                {
+                    full = false;
+
+                    break;
+                }
+            }
+
+
+            if (!full)
+            {
+                continue;
+            }
+
+
+            linesCleared++;
+
+
+            for (int row = y;
+                 row > 0;
+                 row--)
+            {
+                for (int x = 0;
+                     x < Width;
+                     x++)
+                {
+                    board[row, x] =
+                        board[row - 1, x];
+                }
+            }
+
+
+            for (int x = 0;
+                 x < Width;
+                 x++)
+            {
+                board[0, x] = 0;
+            }
+
+
+            y++;
+        }
+
+
+        score += linesCleared switch
+        {
+            1 => 100,
+            2 => 300,
+            3 => 500,
+            4 => 800,
+
+            _ => 0
+        };
+
+
+        await SaveHighScoreIfNeeded();
+    }
+
+
+    // ============================================================
+    // ROTATION
+    // ============================================================
+
+    private void RotatePiece()
+    {
+        int[,] rotated =
+            RotateClockwise(
+                currentShape
+            );
+
+
+        if (CanMove(
+                pieceX,
+                pieceY,
+                rotated))
+        {
+            currentShape = rotated;
+
+            return;
+        }
+
+
+        // Small wall kick left.
+
+        if (CanMove(
+                pieceX - 1,
+                pieceY,
+                rotated))
+        {
+            pieceX--;
+
+            currentShape = rotated;
+
+            return;
+        }
+
+
+        // Small wall kick right.
+
+        if (CanMove(
+                pieceX + 1,
+                pieceY,
+                rotated))
+        {
+            pieceX++;
+
+            currentShape = rotated;
+        }
+    }
+
+
+    private int[,] RotateClockwise(
+        int[,] shape)
+    {
+        int oldHeight =
+            shape.GetLength(0);
+
+        int oldWidth =
+            shape.GetLength(1);
+
+
+        int[,] rotated =
+            new int[
+                oldWidth,
+                oldHeight
+            ];
+
+
+        for (int y = 0;
+             y < oldHeight;
+             y++)
+        {
+            for (int x = 0;
+                 x < oldWidth;
+                 x++)
+            {
+                rotated[
+                    x,
+                    oldHeight - 1 - y
+                ]
+                =
+                shape[y, x];
+            }
+        }
+
+
+        return rotated;
+    }
+
+
+    // ============================================================
+    // GHOST PIECE
+    // ============================================================
+
+    private int GetGhostY()
+    {
+        int ghostY =
+            pieceY;
+
+
+        while (CanMove(
+            pieceX,
+            ghostY + 1,
+            currentShape))
+        {
+            ghostY++;
+        }
+
+
+        return ghostY;
+    }
+
+
+    // ============================================================
+    // KEYBOARD
+    // ============================================================
+
+    private async Task HandleKeyDown(
+        KeyboardEventArgs e)
+    {
+        if (!gameRunning ||
+            gameOver)
+        {
+            return;
+        }
+
+
+        switch (e.Key)
+        {
+            case "a":
+            case "A":
+            case "ArrowLeft":
+
+                MovePiece(-1, 0);
+
+                break;
+
+
+            case "d":
+            case "D":
+            case "ArrowRight":
+
+                MovePiece(1, 0);
+
+                break;
+
+
+            case "s":
+            case "S":
+            case "ArrowDown":
+
+                if (!MovePiece(0, 1))
+                {
+                    LockPiece();
+
+                    await ClearLines();
+
+                    SpawnPiece();
+                }
+
+                break;
+
+
+            case "w":
+            case "W":
+            case "ArrowUp":
+
+                RotatePiece();
+
+                break;
+        }
+    }
+
+
+    // ============================================================
+    // DRAW BOARD
+    // ============================================================
+
+    private string GetBoardText()
+    {
+        StringBuilder output =
+            new();
+
+
+        int ghostY =
+            gameRunning && !gameOver
+                ? GetGhostY()
+                : pieceY;
+
+
+        output.AppendLine(
+            "+" +
+            new string('-', Width * 2) +
+            "+"
+        );
+
+
+        for (int y = 0;
+             y < Height;
+             y++)
+        {
+            output.Append('|');
+
+
+            for (int x = 0;
+                 x < Width;
+                 x++)
+            {
+                bool currentPieceHere =
+                    false;
+
+                bool ghostPieceHere =
+                    false;
+
+
+                // -----------------------------
+                // CURRENT PIECE
+                // -----------------------------
+
+                int localX =
+                    x - pieceX;
+
+                int localY =
+                    y - pieceY;
+
+
+                if (!gameOver &&
+                    localY >= 0 &&
+                    localY <
+                    currentShape.GetLength(0) &&
+                    localX >= 0 &&
+                    localX <
+                    currentShape.GetLength(1))
+                {
+                    currentPieceHere =
+                        currentShape[
+                            localY,
+                            localX
+                        ] != 0;
+                }
+
+
+                // -----------------------------
+                // GHOST PIECE
+                // -----------------------------
+
+                int ghostLocalX =
+                    x - pieceX;
+
+                int ghostLocalY =
+                    y - ghostY;
+
+
+                if (gameRunning &&
+                    !gameOver &&
+                    ghostLocalY >= 0 &&
+                    ghostLocalY <
+                    currentShape.GetLength(0) &&
+                    ghostLocalX >= 0 &&
+                    ghostLocalX <
+                    currentShape.GetLength(1))
+                {
+                    ghostPieceHere =
+                        currentShape[
+                            ghostLocalY,
+                            ghostLocalX
+                        ] != 0;
+                }
+
+
+                // -----------------------------
+                // DRAW
+                // -----------------------------
+
+                if (board[y, x] != 0 ||
+                    currentPieceHere)
+                {
+                    output.Append("[]");
+                }
+                else if (ghostPieceHere)
+                {
+                    output.Append("::");
+                }
+                else
+                {
+                    output.Append("  ");
+                }
+            }
+
+
+            output.AppendLine("|");
+        }
+
+
+        output.Append(
+            "+" +
+            new string('-', Width * 2) +
+            "+"
+        );
+
+
+        return output.ToString();
+    }
+
+
+    // ============================================================
+    // HIGH SCORE
+    // ============================================================
+
+    private async Task LoadHighScore()
+    {
+        // --------------------------------------------------------
+        // LOCAL BROWSER SCORE
+        // --------------------------------------------------------
+
+        try
+        {
+            string? savedScore =
+                await JS.InvokeAsync<string?>(
+                    "localStorage.getItem",
+                    "tetrisHighScore"
+                );
+
+
+            if (int.TryParse(
+                    savedScore,
+                    out int localScore))
+            {
+                highScore =
+                    localScore;
+            }
+        }
+        catch
+        {
+            // Local storage unavailable.
+        }
+
+
+        // --------------------------------------------------------
+        // GITHUB USER SCORE
+        // --------------------------------------------------------
+        //
+        // This endpoint does not exist yet.
+        //
+        // Once we create the backend, it will identify the
+        // authenticated GitHub user and return their score.
+        //
+
+        try
+        {
+            HttpResponseMessage response =
+                await Http.GetAsync(
+                    "api/tetris/score/me"
+                );
+
+
+            if (response.StatusCode ==
+                HttpStatusCode.Unauthorized)
+            {
+                return;
+            }
+
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+
+            PlayerScoreResponse? player =
+                await response.Content
+                    .ReadFromJsonAsync
+                    <PlayerScoreResponse>();
+
+
+            if (player == null)
+            {
+                return;
+            }
+
+
+            githubUsername =
+                player.GitHubUsername;
+
+            isGitHubSignedIn =
+                true;
+
+
+            // Keep whichever score is higher:
+            // local browser score or server score.
+
+            if (player.HighScore >
+                highScore)
+            {
+                highScore =
+                    player.HighScore;
+            }
+            else if (highScore >
+                     player.HighScore)
+            {
+                // User might have played locally before logging in.
+
+                await SaveServerHighScore();
+            }
+        }
+        catch
+        {
+            // No backend yet.
+            //
+            // The game continues normally using localStorage.
+        }
+    }
+
+
+    private async Task SaveHighScoreIfNeeded()
+    {
+        if (score <= highScore)
+        {
+            return;
+        }
+
+
+        highScore =
+            score;
+
+
+        // --------------------------------------------------------
+        // SAVE LOCALLY
+        // --------------------------------------------------------
+
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "localStorage.setItem",
+                "tetrisHighScore",
+                highScore.ToString()
+            );
+        }
+        catch
+        {
+        }
+
+
+        // --------------------------------------------------------
+        // SAVE TO GITHUB USER
+        // --------------------------------------------------------
+
+        if (isGitHubSignedIn)
+        {
+            await SaveServerHighScore();
+        }
+    }
+
+
+    private async Task SaveServerHighScore()
+    {
+        try
+        {
+            HttpResponseMessage response =
+                await Http.PutAsJsonAsync(
+                    "api/tetris/score/me",
+                    new SaveScoreRequest
+                    {
+                        HighScore =
+                            highScore
+                    }
+                );
+
+
+            if (response.StatusCode ==
+                HttpStatusCode.Unauthorized)
+            {
+                isGitHubSignedIn =
+                    false;
+
+                githubUsername =
+                    null;
+            }
+        }
+        catch
+        {
+            // Server unavailable.
+            //
+            // Local high score still remains saved.
+        }
+    }
+
+
+    // ============================================================
+    // TETROMINOES
+    // ============================================================
+
+    private int[,] GetRandomShape()
+    {
+        int[][,] shapes =
+        {
+            // I
+            new int[,]
+            {
+                { 1, 1, 1, 1 }
+            },
+
+
+            // O
+            new int[,]
+            {
+                { 1, 1 },
+                { 1, 1 }
+            },
+
+
+            // T
+            new int[,]
+            {
+                { 0, 1, 0 },
+                { 1, 1, 1 }
+            },
+
+
+            // J
+            new int[,]
+            {
+                { 1, 0, 0 },
+                { 1, 1, 1 }
+            },
+
+
+            // L
+            new int[,]
+            {
+                { 0, 0, 1 },
+                { 1, 1, 1 }
+            },
+
+
+            // S
+            new int[,]
+            {
+                { 0, 1, 1 },
+                { 1, 1, 0 }
+            },
+
+
+            // Z
+            new int[,]
+            {
+                { 1, 1, 0 },
+                { 0, 1, 1 }
+            }
+        };
+
+
+        return shapes[
+            random.Next(
+                shapes.Length
+            )
+        ];
+    }
+
+
+    // ============================================================
+    // API MODELS
+    // ============================================================
+
+    private class PlayerScoreResponse
+    {
+        public string GitHubUsername
+        {
+            get;
+            set;
+        } = "";
+
+        public int HighScore
+        {
+            get;
+            set;
+        }
+    }
+
+
+    private class SaveScoreRequest
+    {
+        public int HighScore
+        {
+            get;
+            set;
+        }
+    }
+}
