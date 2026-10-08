@@ -413,11 +413,7 @@
 
                 if (!MovePiece(0, 1))
                 {
-                    LockPiece();
-
-                    await ClearLines();
-
-                    SpawnPiece();
+                    await LandPiece();
                 }
 
                 await InvokeAsync(
@@ -589,7 +585,7 @@
     // CLEAR LINES
     // ============================================================
 
-    private async Task ClearLines()
+    private int ClearLines()
     {
         int linesCleared = 0;
 
@@ -659,8 +655,23 @@
             _ => 0
         };
 
+        return linesCleared;
+    }
 
-        await SaveHighScoreIfNeeded();
+    private async Task LandPiece()
+    {
+        LockPiece();
+
+        int linesCleared =
+            ClearLines();
+
+        SpawnPiece();
+
+
+        if (linesCleared > 0)
+        {
+            await SaveHighScoreIfNeeded();
+        }
     }
 
 
@@ -818,11 +829,7 @@
 
                 if (!MovePiece(0, 1))
                 {
-                    LockPiece();
-
-                    await ClearLines();
-
-                    SpawnPiece();
+                    await LandPiece();
                 }
 
                 break;
