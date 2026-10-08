@@ -77,11 +77,9 @@
                     <div class="score-card">
                         <span class="label">HOLD</span>
 
-                        <strong>
-                            @(heldType?.ToString() ?? "-")
-                        </strong>
-                    </div>
+                        <pre class="hold-piece">@GetHoldDisplay()</pre>
 
+                    </div>
                 </div>
 
                 <div class="board-column">
@@ -1216,6 +1214,93 @@
         return output.ToString();
     }
 
+    // ============================================================
+    // HOLD PIECE
+    // ============================================================
+
+    private int[,] GetShapeByType(TetrominoType type)
+    {
+        switch (type)
+        {
+            case TetrominoType.I:
+                return new int[,]
+                {
+                { 1, 1, 1, 1 }
+                };
+
+            case TetrominoType.O:
+                return new int[,]
+                {
+                { 1, 1 },
+                { 1, 1 }
+                };
+
+            case TetrominoType.T:
+                return new int[,]
+                {
+                { 0, 1, 0 },
+                { 1, 1, 1 }
+                };
+
+            case TetrominoType.L:
+                return new int[,]
+                {
+                { 1, 0 },
+                { 1, 0 },
+                { 1, 1 }
+                };
+
+            case TetrominoType.J:
+                return new int[,]
+                {
+                { 0, 1 },
+                { 0, 1 },
+                { 1, 1 }
+                };
+
+            case TetrominoType.S:
+                return new int[,]
+                {
+                { 0, 1, 1 },
+                { 1, 1, 0 }
+                };
+
+            default: // Z
+                return new int[,]
+                {
+                { 1, 1, 0 },
+                { 0, 1, 1 }
+                };
+        }
+    }
+
+    private string ShapeToDisplay(int[,] shape)
+    {
+        var sb = new StringBuilder();
+
+        for (int y = 0; y < shape.GetLength(0); y++)
+        {
+            for (int x = 0; x < shape.GetLength(1); x++)
+            {
+                sb.Append(shape[y, x] == 1 ? "[] " : "   ");
+            }
+
+            sb.AppendLine();
+        }
+
+        return sb.ToString();
+    }
+
+    private string GetHoldDisplay()
+    {
+        if (heldType == null)
+        {
+            return "";
+        }
+
+        int[,] shape = GetShapeByType(heldType.Value);
+        return ShapeToDisplay(shape);
+    }
 
     // ============================================================
     // HIGH SCORE

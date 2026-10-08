@@ -395,6 +395,15 @@ kbd {
     flex: 1;
 }
 
+.hold-piece {
+    margin: 0;
+    color: #e6edf3;
+    font-family: Consolas, monospace;
+    font-size: 20px;
+    line-height: 1.1;
+    white-space: pre;
+}
+
 
 /* MOBILE */
 
