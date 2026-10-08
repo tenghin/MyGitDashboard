@@ -74,6 +74,14 @@
                         <strong>@highScore</strong>
                     </div>
 
+                    <div class="score-card">
+                        <span class="label">HOLD</span>
+
+                        <strong>
+                            @(heldType?.ToString() ?? "-")
+                        </strong>
+                    </div>
+
                 </div>
 
                 <div class="board-column">
@@ -107,6 +115,12 @@
                 <div>
                     <kbd>S</kbd>
                     <span>Soft Drop</span>
+                </div>
+
+                <div>
+                    <kbd>C</kbd>
+                    <kbd>Shift</kbd>
+                    <span>Hold</span>
                 </div>
 
             </div>
@@ -329,6 +343,10 @@
 
     private int rotationState;
 
+    private TetrominoType? heldType;
+
+    private bool canHold = true;
+
     private const int NormalLockDelay = 120;
     private const int RotationLockDelay = 300;
 
@@ -397,6 +415,9 @@
             new int[Height, Width];
 
         score = 0;
+
+        heldType = null;
+        canHold = true;
 
         gameOver = false;
         gameRunning = true;
@@ -474,35 +495,20 @@
     // SPAWN
     // ============================================================
 
-    // private void SpawnPiece()
-    // {
-    //     currentShape =
-    //         GetRandomShape();
-
-    //     pieceX =
-    //         (Width -
-    //          currentShape.GetLength(1))
-    //         / 2;
-
-    //     pieceY = 0;
-
-
-    //     if (!CanMove(
-    //             pieceX,
-    //             pieceY,
-    //             currentShape))
-    //     {
-    //         gameOver = true;
-    //         gameRunning = false;
-    //     }
-    // }
-
     private void SpawnPiece()
-    {   
+    {
+        SpawnPiece(
+            (TetrominoType)random.Next(7)
+        );
+    }
+
+
+    private void SpawnPiece(
+        TetrominoType type)
+    {
         rotatedWhileGrounded = false;
 
-        currentType =
-            (TetrominoType)random.Next(7);
+        currentType = type;
 
         rotationState = 0;
 
@@ -526,6 +532,46 @@
             gameOver = true;
             gameRunning = false;
         }
+    }
+
+    private void HoldPiece()
+    {
+        if (!canHold ||
+            gameOver)
+        {
+            return;
+        }
+
+
+        TetrominoType outgoingPiece =
+            currentType;
+
+
+        // Nothing is currently held.
+        if (heldType == null)
+        {
+            heldType =
+                outgoingPiece;
+
+            SpawnPiece();
+        }
+
+        // Swap with the held piece.
+        else
+        {
+            TetrominoType incomingPiece =
+                heldType.Value;
+
+            heldType =
+                outgoingPiece;
+
+            SpawnPiece(
+                incomingPiece
+            );
+        }
+
+
+        canHold = false;
     }
 
 
@@ -739,6 +785,7 @@
 
         SpawnPiece();
 
+        canHold = true;
 
         if (linesCleared > 0)
         {
@@ -1011,6 +1058,13 @@
 
                 break;
 
+            case "c":
+            case "C":
+            case "Shift":
+
+                HoldPiece();
+
+                break;
 
             case "w":
             case "W":
