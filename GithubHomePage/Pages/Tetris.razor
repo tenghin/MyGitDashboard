@@ -314,6 +314,21 @@
     private int pieceX;
     private int pieceY;
 
+    private enum TetrominoType
+    {
+        I,
+        O,
+        T,
+        J,
+        L,
+        S,
+        Z
+    }
+
+    private TetrominoType currentType;
+
+    private int rotationState;
+
 
     // ============================================================
     // SCORE
@@ -413,7 +428,19 @@
 
                 if (!MovePiece(0, 1))
                 {
-                    await LandPiece();
+                    await Task.Delay(
+                        500,
+                        token
+                    );
+
+
+                    if (!CanMove(
+                            pieceX,
+                            pieceY + 1,
+                            currentShape))
+                    {
+                        await LandPiece();
+                    }
                 }
 
                 await InvokeAsync(
@@ -432,10 +459,39 @@
     // SPAWN
     // ============================================================
 
+    // private void SpawnPiece()
+    // {
+    //     currentShape =
+    //         GetRandomShape();
+
+    //     pieceX =
+    //         (Width -
+    //          currentShape.GetLength(1))
+    //         / 2;
+
+    //     pieceY = 0;
+
+
+    //     if (!CanMove(
+    //             pieceX,
+    //             pieceY,
+    //             currentShape))
+    //     {
+    //         gameOver = true;
+    //         gameRunning = false;
+    //     }
+    // }
+
     private void SpawnPiece()
     {
+        currentType =
+            (TetrominoType)random.Next(7);
+
+        rotationState = 0;
+
         currentShape =
-            GetRandomShape();
+            GetSpawnShape(currentType);
+
 
         pieceX =
             (Width -
@@ -524,14 +580,13 @@
                 }
 
 
-                if (boardY < 0 ||
-                    boardY >= Height)
+                if (boardY >= Height)
                 {
                     return false;
                 }
 
 
-                if (board[boardY, boardX] != 0)
+                if (boardY >= 0 && board[boardY, boardX] != 0)
                 {
                     return false;
                 }
@@ -681,49 +736,155 @@
 
     private void RotatePiece()
     {
+        if (currentType ==
+            TetrominoType.O)
+        {
+            return;
+        }
+
+
+        int fromState =
+            rotationState;
+
+        int toState =
+            (rotationState + 1) % 4;
+
+
         int[,] rotated =
             RotateClockwise(
                 currentShape
             );
 
 
-        if (CanMove(
-                pieceX,
-                pieceY,
-                rotated))
+        foreach (var kick in
+                 GetKickTests(
+                     fromState,
+                     toState))
         {
+            int newX =
+                pieceX + kick.X;
+
+            int newY =
+                pieceY + kick.Y;
+
+
+            if (!CanMove(
+                    newX,
+                    newY,
+                    rotated))
+            {
+                continue;
+            }
+
+
+            pieceX = newX;
+            pieceY = newY;
+
             currentShape = rotated;
+
+            rotationState =
+                toState;
 
             return;
         }
+    }
 
-
-        // Small wall kick left.
-
-        if (CanMove(
-                pieceX - 1,
-                pieceY,
-                rotated))
+    private (int X, int Y)[] GetKickTests(
+    int from,
+    int to)
+    {
+        if (currentType ==
+            TetrominoType.I)
         {
-            pieceX--;
+            return (from, to) switch
+            {
+                (0, 1) => new[]
+                {
+                (0, 0),
+                (-2, 0),
+                (1, 0),
+                (-2, 1),
+                (1, -2)
+            },
 
-            currentShape = rotated;
+                (1, 2) => new[]
+                {
+                (0, 0),
+                (-1, 0),
+                (2, 0),
+                (-1, -2),
+                (2, 1)
+            },
 
-            return;
+                (2, 3) => new[]
+                {
+                (0, 0),
+                (2, 0),
+                (-1, 0),
+                (2, -1),
+                (-1, 2)
+            },
+
+                (3, 0) => new[]
+                {
+                (0, 0),
+                (1, 0),
+                (-2, 0),
+                (1, 2),
+                (-2, -1)
+            },
+
+                _ => new[]
+                {
+                (0, 0)
+            }
+            };
         }
 
 
-        // Small wall kick right.
-
-        if (CanMove(
-                pieceX + 1,
-                pieceY,
-                rotated))
+        return (from, to) switch
         {
-            pieceX++;
+            (0, 1) => new[]
+            {
+            (0, 0),
+            (-1, 0),
+            (-1, -1),
+            (0, 2),
+            (-1, 2)
+        },
 
-            currentShape = rotated;
+            (1, 2) => new[]
+            {
+            (0, 0),
+            (1, 0),
+            (1, 1),
+            (0, -2),
+            (1, -2)
+        },
+
+            (2, 3) => new[]
+            {
+            (0, 0),
+            (1, 0),
+            (1, -1),
+            (0, 2),
+            (1, 2)
+        },
+
+            (3, 0) => new[]
+            {
+            (0, 0),
+            (-1, 0),
+            (-1, 1),
+            (0, -2),
+            (-1, -2)
+        },
+
+            _ => new[]
+            {
+            (0, 0)
         }
+        };
     }
 
 
@@ -827,10 +988,7 @@
             case "S":
             case "ArrowDown":
 
-                if (!MovePiece(0, 1))
-                {
-                    await LandPiece();
-                }
+                MovePiece(0, 1);
 
                 break;
 
@@ -1164,71 +1322,137 @@
     // TETROMINOES
     // ============================================================
 
-    private int[,] GetRandomShape()
+    // private int[,] GetRandomShape()
+    // {
+    //     int[][,] shapes =
+    //     {
+    //         // I
+    //         new int[,]
+    //         {
+    //             { 1, 1, 1, 1 }
+    //         },
+
+
+    //         // O
+    //         new int[,]
+    //         {
+    //             { 1, 1 },
+    //             { 1, 1 }
+    //         },
+
+
+    //         // T
+    //         new int[,]
+    //         {
+    //             { 0, 1, 0 },
+    //             { 1, 1, 1 }
+    //         },
+
+
+    //         // J
+    //         new int[,]
+    //         {
+    //             { 1, 0, 0 },
+    //             { 1, 1, 1 }
+    //         },
+
+
+    //         // L
+    //         new int[,]
+    //         {
+    //             { 0, 0, 1 },
+    //             { 1, 1, 1 }
+    //         },
+
+
+    //         // S
+    //         new int[,]
+    //         {
+    //             { 0, 1, 1 },
+    //             { 1, 1, 0 }
+    //         },
+
+
+    //         // Z
+    //         new int[,]
+    //         {
+    //             { 1, 1, 0 },
+    //             { 0, 1, 1 }
+    //         }
+    //     };
+
+
+    //     return shapes[
+    //         random.Next(
+    //             shapes.Length
+    //         )
+    //     ];
+    // }
+
+    private int[,] GetSpawnShape(
+    TetrominoType type)
     {
-        int[][,] shapes =
+        return type switch
         {
-            // I
-            new int[,]
-            {
-                { 1, 1, 1, 1 }
-            },
+            TetrominoType.I =>
+                new int[,]
+                {
+                { 0, 0, 0, 0 },
+                { 1, 1, 1, 1 },
+                { 0, 0, 0, 0 },
+                { 0, 0, 0, 0 }
+                },
 
-
-            // O
-            new int[,]
-            {
+            TetrominoType.O =>
+                new int[,]
+                {
                 { 1, 1 },
                 { 1, 1 }
-            },
+                },
 
-
-            // T
-            new int[,]
-            {
+            TetrominoType.T =>
+                new int[,]
+                {
                 { 0, 1, 0 },
-                { 1, 1, 1 }
-            },
+                { 1, 1, 1 },
+                { 0, 0, 0 }
+                },
 
-
-            // J
-            new int[,]
-            {
+            TetrominoType.J =>
+                new int[,]
+                {
                 { 1, 0, 0 },
-                { 1, 1, 1 }
-            },
+                { 1, 1, 1 },
+                { 0, 0, 0 }
+                },
 
-
-            // L
-            new int[,]
-            {
+            TetrominoType.L =>
+                new int[,]
+                {
                 { 0, 0, 1 },
-                { 1, 1, 1 }
-            },
+                { 1, 1, 1 },
+                { 0, 0, 0 }
+                },
 
-
-            // S
-            new int[,]
-            {
+            TetrominoType.S =>
+                new int[,]
+                {
                 { 0, 1, 1 },
-                { 1, 1, 0 }
-            },
-
-
-            // Z
-            new int[,]
-            {
                 { 1, 1, 0 },
-                { 0, 1, 1 }
-            }
+                { 0, 0, 0 }
+                },
+
+            TetrominoType.Z =>
+                new int[,]
+                {
+                { 1, 1, 0 },
+                { 0, 1, 1 },
+                { 0, 0, 0 }
+                },
+
+            _ =>
+                throw new InvalidOperationException()
         };
-
-
-        return shapes[
-            random.Next(
-                shapes.Length
-            )
-        ];
     }
 
 
