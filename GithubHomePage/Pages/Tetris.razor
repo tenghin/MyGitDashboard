@@ -134,17 +134,11 @@
 
             <section class="info-card">
 
-                <div class="leaderboard-header">
+                <span class="card-label">
+                    PLAYER
+                </span>
 
-                    <div>
-                        <span class="card-label">
-                            PLAYER
-                        </span>
-
-                        <h2>High Score</h2>
-                    </div>
-
-                </div>
+                <h2>Profile</h2>
 
 
                 @if (githubPlayer == null)
@@ -162,7 +156,7 @@
                 }
                 else
                 {
-                    <div class="leaderboard-empty">
+                    <div class="player-profile">
 
                         @if (!string.IsNullOrWhiteSpace(
                                             githubPlayer.AvatarUrl))
@@ -172,12 +166,11 @@
                                  alt="GitHub avatar" />
                         }
 
-                        <strong>
+
+                        <strong class="player-name">
                             @githubPlayer.Username
                         </strong>
 
-                        <br />
-                        <br />
 
                         <button class="github-login"
                                 @onclick="Logout">
@@ -185,6 +178,70 @@
                             Sign out
 
                         </button>
+
+                    </div>
+                }
+
+            </section>
+
+
+
+            <section class="info-card">
+
+                <span class="card-label">
+                    LEADERBOARD
+                </span>
+
+                <h2>Top Players</h2>
+
+
+                @if (leaderboard.Count == 0)
+                {
+                    <div class="leaderboard-empty">
+
+                        No scores yet.
+
+                    </div>
+                }
+                else
+                {
+                    <div class="leaderboard-list">
+
+                        @for (int i = 0;
+                                            i < leaderboard.Count;
+                                            i++)
+                        {
+                            var player =
+                            leaderboard[i];
+
+
+                            <div class="leaderboard-row">
+
+                                <span class="leaderboard-rank">
+                                    @(i + 1).
+                                </span>
+
+
+                                @if (!string.IsNullOrWhiteSpace(
+                                                        player.AvatarUrl))
+                                {
+                                    <img src="@player.AvatarUrl"
+                                         class="leaderboard-avatar"
+                                         alt="" />
+                                }
+
+
+                                <span class="leaderboard-name">
+                                    @player.Username
+                                </span>
+
+
+                                <strong class="leaderboard-score">
+                                    @player.HighScore
+                                </strong>
+
+                            </div>
+                        }
 
                     </div>
                 }
@@ -294,6 +351,8 @@
 
     private GitHubPlayer? githubPlayer;
 
+    private List<LeaderboardPlayer> leaderboard =
+    new();
 
     // ============================================================
     // STARTUP
@@ -1022,40 +1081,40 @@
 
     private async Task SaveHighScoreIfNeeded()
     {
-        if (score <= highScore)
+        if (score > highScore)
         {
-            return;
+            highScore = score;
+
+            try
+            {
+                await JS.InvokeVoidAsync(
+                    "localStorage.setItem",
+                    "tetrisHighScore",
+                    highScore.ToString()
+                );
+            }
+            catch
+            {
+            }
         }
 
-
-        highScore =
-            score;
-
-
-        // --------------------------------------------------------
-        // SAVE LOCALLY
-        // --------------------------------------------------------
-
-        try
+        if (githubPlayer != null && authModule != null)
         {
-            await JS.InvokeVoidAsync(
-                "localStorage.setItem",
-                "tetrisHighScore",
-                highScore.ToString()
+            // Save this player's score first.
+            await authModule.InvokeVoidAsync(
+                "saveScore",
+                score
             );
-        }
-        catch
-        {
-        }
 
+            // Then reload the leaderboard.
+            leaderboard =
+                await authModule.InvokeAsync<
+                    List<LeaderboardPlayer>
+                >(
+                    "getLeaderboard"
+                );
 
-        // --------------------------------------------------------
-        // SAVE TO GITHUB USER
-        // --------------------------------------------------------
-
-        if (isGitHubSignedIn)
-        {
-            await SaveServerHighScore();
+            StateHasChanged();
         }
     }
 
@@ -1197,7 +1256,8 @@
 
     
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAfterRenderAsync(
+    bool firstRender)
     {
         if (!firstRender)
             return;
@@ -1208,10 +1268,20 @@
                 "./js/auth.js"
             );
 
+
         githubPlayer =
             await authModule.InvokeAsync<GitHubPlayer?>(
                 "getCurrentUser"
             );
+
+
+        leaderboard =
+            await authModule.InvokeAsync<
+                List<LeaderboardPlayer>
+            >(
+                "getLeaderboard"
+            );
+
 
         StateHasChanged();
     }
@@ -1246,5 +1316,14 @@
         public string Username { get; set; } = "";
 
         public string AvatarUrl { get; set; } = "";
+    }
+
+    private class LeaderboardPlayer
+    {
+        public string Username { get; set; } = "";
+
+        public string AvatarUrl { get; set; } = "";
+
+        public int HighScore { get; set; }
     }
 }
