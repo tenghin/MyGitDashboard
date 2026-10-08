@@ -54,7 +54,7 @@
     display: grid;
     grid-template-columns: minmax(650px, 1fr) 350px;
     gap: 20px;
-    align-items: stretch;
+    align-items: start;
 }
 
 
@@ -235,6 +235,9 @@ kbd {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    max-height: calc(100dvh - 150px);
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .info-card {
@@ -373,18 +376,23 @@ kbd {
 
 .player-profile {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     gap: 10px;
-    margin-top: 14px;
-    padding: 16px;
+    margin-top: 10px;
+    padding: 10px;
     border: 1px solid #21262d;
     border-radius: 6px;
 }
 
+    .player-profile .github-avatar {
+        width: 32px;
+        height: 32px;
+        margin: 0;
+    }
+
 .player-name {
-    color: #e6edf3;
-    font-family: Consolas, monospace;
+    flex: 1;
 }
 
 
