@@ -329,6 +329,11 @@
 
     private int rotationState;
 
+    private const int NormalLockDelay = 120;
+    private const int RotationLockDelay = 300;
+
+    private bool rotatedWhileGrounded;
+
 
     // ============================================================
     // SCORE
@@ -426,10 +431,20 @@
                     token
                 );
 
-                if (!MovePiece(0, 1))
+                if (MovePiece(0, 1))
                 {
+                    rotatedWhileGrounded = false;
+                }
+                else
+                {
+                    int delay =
+                        rotatedWhileGrounded
+                            ? RotationLockDelay
+                            : NormalLockDelay;
+
+
                     await Task.Delay(
-                        500,
+                        delay,
                         token
                     );
 
@@ -483,7 +498,9 @@
     // }
 
     private void SpawnPiece()
-    {
+    {   
+        rotatedWhileGrounded = false;
+
         currentType =
             (TetrominoType)random.Next(7);
 
@@ -734,12 +751,12 @@
     // ROTATION
     // ============================================================
 
-    private void RotatePiece()
+    private bool RotatePiece()
     {
         if (currentType ==
             TetrominoType.O)
         {
-            return;
+            return false;
         }
 
 
@@ -785,8 +802,10 @@
             rotationState =
                 toState;
 
-            return;
+            return true;
         }
+
+        return false;
     }
 
     private (int X, int Y)[] GetKickTests(
@@ -997,7 +1016,16 @@
             case "W":
             case "ArrowUp":
 
-                RotatePiece();
+                if (RotatePiece())
+                {
+                    rotatedWhileGrounded =
+                        currentType == TetrominoType.T &&
+                        !CanMove(
+                            pieceX,
+                            pieceY + 1,
+                            currentShape
+                        );
+                }
 
                 break;
         }
@@ -1321,73 +1349,6 @@
     // ============================================================
     // TETROMINOES
     // ============================================================
-
-    // private int[,] GetRandomShape()
-    // {
-    //     int[][,] shapes =
-    //     {
-    //         // I
-    //         new int[,]
-    //         {
-    //             { 1, 1, 1, 1 }
-    //         },
-
-
-    //         // O
-    //         new int[,]
-    //         {
-    //             { 1, 1 },
-    //             { 1, 1 }
-    //         },
-
-
-    //         // T
-    //         new int[,]
-    //         {
-    //             { 0, 1, 0 },
-    //             { 1, 1, 1 }
-    //         },
-
-
-    //         // J
-    //         new int[,]
-    //         {
-    //             { 1, 0, 0 },
-    //             { 1, 1, 1 }
-    //         },
-
-
-    //         // L
-    //         new int[,]
-    //         {
-    //             { 0, 0, 1 },
-    //             { 1, 1, 1 }
-    //         },
-
-
-    //         // S
-    //         new int[,]
-    //         {
-    //             { 0, 1, 1 },
-    //             { 1, 1, 0 }
-    //         },
-
-
-    //         // Z
-    //         new int[,]
-    //         {
-    //             { 1, 1, 0 },
-    //             { 0, 1, 1 }
-    //         }
-    //     };
-
-
-    //     return shapes[
-    //         random.Next(
-    //             shapes.Length
-    //         )
-    //     ];
-    // }
 
     private int[,] GetSpawnShape(
     TetrominoType type)
