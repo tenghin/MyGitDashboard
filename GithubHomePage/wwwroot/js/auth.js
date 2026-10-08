@@ -36,16 +36,43 @@ export async function getCurrentUser() {
 
     const user = data.user;
 
+    const username =
+        user.user_metadata.user_name ??
+        user.user_metadata.preferred_username ??
+        'GitHub User';
+
+    const avatarUrl =
+        user.user_metadata.avatar_url ?? null;
+
+
+    // Record/update this GitHub user in our table.
+    const { error: playerError } =
+        await supabase
+            .from('tetris_players')
+            .upsert(
+                {
+                    user_id: user.id,
+                    github_username: username,
+                    avatar_url: avatarUrl
+                },
+                {
+                    onConflict: 'user_id'
+                }
+            );
+
+
+    if (playerError) {
+        console.error(
+            'Failed to save player:',
+            playerError
+        );
+    }
+
+
     return {
         id: user.id,
-
-        username:
-            user.user_metadata.user_name ??
-            user.user_metadata.preferred_username ??
-            'GitHub User',
-
-        avatarUrl:
-            user.user_metadata.avatar_url ?? ''
+        username: username,
+        avatarUrl: avatarUrl ?? ''
     };
 }
 
