@@ -94,6 +94,7 @@
                         @(gameRunning ? "Restart Game" : "Start Game")
                     </button> *@
 
+
                     <div class="game-actions">
                         <button class="play-button"
                                 @onclick="StartGame"
@@ -108,23 +109,12 @@
                         </button>
 
                         <button class="stop-button"
-                                @onclick="StopGame"
-                                disabled="@(!gameRunning)">
-                            @(gameRunning
-                                                        ? "Stop Game"
-                                                        : gameStopped
-                                                        ? "Stopped"
-                                                        : gameOver
-                                                        ? "Game Over"
-                                                        : "Not Running")
-                        </button>
-
-                        <button class="restart-button"
-                                @onclick="RestartGame"
-                                disabled="@(!gameRunning && !gameStopped)">
-                            Restart Game
+                                @onclick="HandleStopOrRestart"
+                                disabled="@(!gameRunning && !gameStopped && !gameOver)">
+                            @(gameRunning ? "Stop Game" : "Restart Game")
                         </button>
                     </div>
+
 
 
                 </div>
@@ -520,6 +510,20 @@
         // Start a new game loop.
         await StartGameLoop();
     }
+
+
+    private async Task HandleStopOrRestart()
+    {
+        if (gameRunning)
+        {
+            StopGame();
+        }
+        else if (gameStopped || gameOver)
+        {
+            await RestartGame();
+        }
+    }
+
 
 
     private async Task StartGameLoop()
