@@ -1,5 +1,8 @@
-# I AM BORED
+# My Web Portfolio and little Tetris game
 
-C# experiments and mini apps.
+Demonstrating what I am capable of creating and my past project.
 
-🎮 [Play Tetris](https://tenghin.github.io/MyGitDashboard/)
+This project is still current **work in progress**, but please do fell free to come and beat the leaderboard.
+
+Link to
+🎮 [Play Tetris](https://tenghin.github.io/MyGitDashboard/tetris)
