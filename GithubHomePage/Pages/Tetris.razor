@@ -126,6 +126,11 @@
                     <span>Hold</span>
                 </div>
 
+                <div>
+                    <kbd>Space</kbd>
+                    <span>Hard Drop</span>
+                </div>
+
             </div>
 
         </section>
@@ -796,6 +801,13 @@
         }
     }
 
+    private async Task HardDrop()
+    {
+        pieceY = GetGhostY();
+
+        await LandPiece();
+    }
+
 
     // ============================================================
     // ROTATION
@@ -1214,6 +1226,14 @@
                             currentShape
                         );
                 }
+
+                break;
+
+            case " ":
+            case "Space":
+            case "Spacebar":
+
+                await HardDrop();
 
                 break;
         }
