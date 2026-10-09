@@ -194,6 +194,57 @@
         background: #2ea043;
     }
 
+/* GAME ACTIONS */
+
+.game-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    max-width: 300px;
+    margin-top: 18px;
+}
+
+    .game-actions button {
+        min-width: 0;
+        margin-top: 0;
+        padding: 10px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .game-actions .play-button {
+        min-width: 0;
+        margin-top: 0;
+    }
+
+.stop-button {
+    border: 1px solid #da3633;
+    background: #b62324;
+    color: white;
+}
+
+    .stop-button:hover:not(:disabled) {
+        background: #da3633;
+    }
+
+.restart-button {
+    grid-column: 1 / -1;
+    border: 1px solid #30363d;
+    background: #21262d;
+    color: #e6edf3;
+}
+
+    .restart-button:hover {
+        background: #30363d;
+    }
+
+.game-actions button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
 
 /* CONTROLS */
 

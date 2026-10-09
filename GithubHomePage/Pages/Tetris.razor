@@ -54,6 +54,8 @@
                                         ? "GAME OVER"
                                         : gameRunning
                                         ? "RUNNING"
+                                        : gameStopped
+                                        ? "STOPPED"
                                         : "READY")
                 </span>
 
@@ -88,9 +90,32 @@
                         <pre>@GetBoardText()</pre>
                     </div>
 
-                    <button class="play-button" @onclick="StartGame">
+                    @* <button class="play-button" @onclick="StartGame">
                         @(gameRunning ? "Restart Game" : "Start Game")
-                    </button>
+                    </button> *@
+
+                    <div class="game-actions">
+                        <button class="play-button"
+                                @onclick="StartGame"
+                                disabled="@gameRunning">
+                            @(gameStopped
+                                                        ? "Resume Game"
+                                                        : gameOver
+                                                        ? "New Game"
+                                                        : "Start Game")
+                        </button>
+
+                        <button class="stop-button"
+                                @onclick="StopGame"
+                                disabled="@(!gameRunning)">
+                            Stop Game
+                        </button>
+
+                        <button class="restart-button"
+                                @onclick="RestartGame">
+                            Restart Game
+                        </button>
+                    </div>
 
                 </div>
 
@@ -270,8 +295,7 @@
 
             </section>
 
-
-            <section class="info-card">
+@*             <section class="info-card">
 
                 <span class="card-label">
                     RUNTIME
@@ -302,7 +326,7 @@
 
                 </div>
 
-            </section>
+            </section> *@
 
         </aside>
 
@@ -383,6 +407,7 @@
     // ============================================================
 
     private bool gameRunning;
+    private bool gameStopped;
     private bool gameOver;
 
     private ElementReference gamePanel;
@@ -414,32 +439,86 @@
     // START / RESTART
     // ============================================================
 
+    // ============================================================
+    // START / STOP / RESTART
+    // ============================================================
+
     private async Task StartGame()
     {
+        // Do nothing if the game is already running.
+        if (gameRunning)
+        {
+            return;
+        }
+
+        // Resume the existing game if it was stopped.
+        if (gameStopped && !gameOver)
+        {
+            gameStopped = false;
+            gameRunning = true;
+
+            await StartGameLoop();
+
+            return;
+        }
+
+        // Otherwise, start a fresh game.
+        await RestartGame();
+    }
+
+
+    private void StopGame()
+    {
+        if (!gameRunning)
+        {
+            return;
+        }
+
+        gameRunning = false;
+        gameStopped = true;
+
+        // Stop the falling-piece loop.
         gameLoopCancellation?.Cancel();
         gameLoopCancellation?.Dispose();
+        gameLoopCancellation = null;
+    }
 
-        board =
-            new int[Height, Width];
 
+    private async Task RestartGame()
+    {
+        // Cancel any previous game loop.
+        gameLoopCancellation?.Cancel();
+        gameLoopCancellation?.Dispose();
+        gameLoopCancellation = null;
+
+        // Reset the board and score.
+        board = new int[Height, Width];
         score = 0;
 
+        // Reset the held piece.
         heldType = null;
         canHold = true;
 
+        // Reset the game state.
         gameOver = false;
+        gameStopped = false;
         gameRunning = true;
 
+        // Spawn the first piece.
         SpawnPiece();
 
-        gameLoopCancellation =
-            new CancellationTokenSource();
+        // Start a new game loop.
+        await StartGameLoop();
+    }
+
+
+    private async Task StartGameLoop()
+    {
+        gameLoopCancellation = new CancellationTokenSource();
 
         await gamePanel.FocusAsync();
 
-        _ = RunGameLoop(
-            gameLoopCancellation.Token
-        );
+        _ = RunGameLoop(gameLoopCancellation.Token);
     }
 
 
@@ -452,8 +531,7 @@
     {
         try
         {
-            while (!gameOver &&
-                   !token.IsCancellationRequested)
+            while (gameRunning && !gameOver && !token.IsCancellationRequested)
             {
                 await Task.Delay(
                     400,
@@ -494,7 +572,7 @@
         }
         catch (TaskCanceledException)
         {
-            // Restarting the game cancels the old loop.
+            //Stop or restart cancels the old loop.
         }
     }
 
