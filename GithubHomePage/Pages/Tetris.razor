@@ -98,7 +98,9 @@
                         <button class="play-button"
                                 @onclick="StartGame"
                                 disabled="@gameRunning">
-                            @(gameStopped
+                            @(gameRunning
+                                                        ? "Running..."
+                                                        : gameStopped
                                                         ? "Resume Game"
                                                         : gameOver
                                                         ? "New Game"
@@ -108,14 +110,22 @@
                         <button class="stop-button"
                                 @onclick="StopGame"
                                 disabled="@(!gameRunning)">
-                            Stop Game
+                            @(gameRunning
+                                                        ? "Stop Game"
+                                                        : gameStopped
+                                                        ? "Stopped"
+                                                        : gameOver
+                                                        ? "Game Over"
+                                                        : "Not Running")
                         </button>
 
                         <button class="restart-button"
-                                @onclick="RestartGame">
+                                @onclick="RestartGame"
+                                disabled="@(!gameRunning && !gameStopped)">
                             Restart Game
                         </button>
                     </div>
+
 
                 </div>
 
