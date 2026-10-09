@@ -107,7 +107,12 @@
 
                 <div>
                     <kbd>W</kbd>
-                    <span>Rotate</span>
+                    <span>Rotate ↻</span>
+                </div>
+
+                <div>
+                    <kbd>Z</kbd>
+                    <span>Rotate ↺</span>
                 </div>
 
                 <div>
@@ -796,7 +801,8 @@
     // ROTATION
     // ============================================================
 
-    private bool RotatePiece()
+    private bool RotatePiece(
+    bool clockwise)
     {
         if (currentType ==
             TetrominoType.O)
@@ -809,13 +815,15 @@
             rotationState;
 
         int toState =
-            (rotationState + 1) % 4;
+            clockwise
+                ? (rotationState + 1) % 4
+                : (rotationState + 3) % 4;
 
 
         int[,] rotated =
-            RotateClockwise(
-                currentShape
-            );
+            clockwise
+                ? RotateClockwise(currentShape)
+                : RotateCounterClockwise(currentShape);
 
 
         foreach (var kick in
@@ -849,6 +857,7 @@
 
             return true;
         }
+
 
         return false;
     }
@@ -898,10 +907,46 @@
                 (-2, -1)
             },
 
+                (1, 0) => new[]
+            {
+                    (0, 0),
+                    (2, 0),
+                    (-1, 0),
+                    (2, -1),
+                    (-1, 2)
+            },
+
+                (2, 1) => new[]
+            {
+                    (0, 0),
+                    (1, 0),
+                    (-2, 0),
+                    (1, 2),
+                    (-2, -1)
+            },
+
+                (3, 2) => new[]
+            {
+                    (0, 0),
+                    (-2, 0),
+                    (1, 0),
+                    (-2, 1),
+                    (1, -2)
+            },
+
+                (0, 3) => new[]
+            {
+                    (0, 0),
+                    (-1, 0),
+                    (2, 0),
+                    (-1, -2),
+                    (2, 1)
+            },
+
                 _ => new[]
-                {
+            {
                 (0, 0)
-            }
+            },
             };
         }
 
@@ -944,10 +989,47 @@
             (-1, -2)
         },
 
+            (1, 0) => new[]
+        {
+                (0, 0),
+                (1, 0),
+                (1, 1),
+                (0, -2),
+                (1, -2)
+            },
+
+            (2, 1) => new[]
+            {
+                (0, 0),
+                (-1, 0),
+                (-1, -1),
+                (0, 2),
+                (-1, 2)
+            },
+
+            (3, 2) => new[]
+            {
+                (0, 0),
+                (-1, 0),
+                (-1, 1),
+                (0, -2),
+                (-1, -2)
+            },
+
+            (0, 3) => new[]
+            {
+                (0, 0),
+                (1, 0),
+                (1, -1),
+                (0, 2),
+                (1, 2)
+            },
+
             _ => new[]
             {
             (0, 0)
-        }
+        },
+
         };
     }
 
@@ -980,6 +1062,44 @@
                 rotated[
                     x,
                     oldHeight - 1 - y
+                ]
+                =
+                shape[y, x];
+            }
+        }
+
+
+        return rotated;
+    }
+
+    private int[,] RotateCounterClockwise(
+    int[,] shape)
+    {
+        int oldHeight =
+            shape.GetLength(0);
+
+        int oldWidth =
+            shape.GetLength(1);
+
+
+        int[,] rotated =
+            new int[
+                oldWidth,
+                oldHeight
+            ];
+
+
+        for (int y = 0;
+             y < oldHeight;
+             y++)
+        {
+            for (int x = 0;
+                 x < oldWidth;
+                 x++)
+            {
+                rotated[
+                    oldWidth - 1 - x,
+                    y
                 ]
                 =
                 shape[y, x];
@@ -1068,7 +1188,23 @@
             case "W":
             case "ArrowUp":
 
-                if (RotatePiece())
+                if (RotatePiece(true))
+                {
+                    rotatedWhileGrounded =
+                        currentType == TetrominoType.T &&
+                        !CanMove(
+                            pieceX,
+                            pieceY + 1,
+                            currentShape
+                        );
+                }
+
+                break;
+
+            case "z":
+            case "Z":
+
+                if (RotatePiece(false))
                 {
                     rotatedWhileGrounded =
                         currentType == TetrominoType.T &&
